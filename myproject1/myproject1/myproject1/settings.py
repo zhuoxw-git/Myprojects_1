@@ -11,10 +11,14 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import sys
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# 创建多个app,同时存放到apps文件夹下，配置导入路径，在INSTALL APPS中就可以设置新创建的app
+sys.path.insert(0,BASE_DIR)
+sys.path.insert(1,os.path.join(BASE_DIR,'apps'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
@@ -25,6 +29,7 @@ SECRET_KEY = 'pjg9&3-)a-emplwj02xy9^)y0(0p!uysl_5141z)zf@wl5y@&a'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# '*'表示支持所有域名/IP访问
 ALLOWED_HOSTS = ['*']
 
 
@@ -37,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'users',
 ]
 
 MIDDLEWARE = [
@@ -54,7 +60,7 @@ ROOT_URLCONF = 'myproject1.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR,'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -74,13 +80,81 @@ WSGI_APPLICATION = 'myproject1.wsgi.application'
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    # 方法1
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME': 'myproject1',
+    #     'USER':'zhuoxw',
+    #     'PASSWORD':'123456',
+    #     'HOST':'127.0.0.1',
+    #     'PORT':'3306'
+    # }
+    # 方法二：推荐
+    'default':{
+        'ENGINE':'django.db.backends.mysql',
+        'OPTIONS':{
+            'read_default_file':'utils/dbs/my.cnf',
+        },
     }
 }
+#在settings.py中指定redis配置,可配置多个，redis有16可哭
+CACHES = {
+    'default':{
+        'BACKEND':'django_redis.cache.RedisCache',
+        # /0表示第一个库
+        'LOCATION':'redis://127.0.0.1:6379/0',
+        'OPTIONS':{
+            'CLIENT_CLASS':'django_redis.client.DefalutClient',
+        }
+    },
+}
 
-
+# 配置日志器，专门创建logs目录，用于存放log信息，按log等级
+LOGGING = {
+    #版本
+    'version':1,
+    #是否禁用已存在的日志器
+    'disable_existing_loggers':False,
+    'formatters':{
+        'verbose':{
+            'format':'%(levelname)s %(asctime)s %(module)s %(lineno)d %(message)s'
+        },
+        'simple':{
+            'format':'%(levelname)s %(module)s %(lineno)d %(message)s'
+        },
+    },
+    'filters':{
+        'requrire_debug_true':{
+            '()':'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'handlers':{
+        'console':{
+            'level':'DEBUG',
+            'filters':['require_debug_true'],
+            'class':'logging.StreamHandler',
+            'formatter':'simple'
+        },
+        'file':{
+            'level':'INFO',
+            'class':'logging.handlers.RotatingFileHandler',
+            # 日志文件存放位置
+            'filename':os.path.join(BASE_DIR,'logs/log.log'),
+            'maxBytes':300*1024*1024,
+            'backupCount':10,
+            'formatter':'verbose'
+        },
+    },
+    'loggers':{
+        #定义了一个名未django的日志器，命名可随意
+        'django':{
+            'handlers':['console','file'],
+            'propagate':True,
+            # 日志器接收的最低日志级别
+            'level':'INFO',
+        },
+    }
+}
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
 
@@ -99,13 +173,16 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+#日志服务器信息记录，防止黑客攻击无从下手，直接从日志文件中处理；一般线上不是会单独使用日志服务器
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'zh-hans'
 
-TIME_ZONE = 'UTC'
+# TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
 
@@ -118,3 +195,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+#用于存放静态文件信息
+STATICFILES_DIRS = {
+    os.path.join(BASE_DIR,'static'),
+}
